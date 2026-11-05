@@ -9,5 +9,5 @@ package dev.app8.cloud.internal
  * train); `SdkVersionTest` and `scripts/check-version.sh` enforce that.
  */
 internal object SDKVersion {
-    const val CURRENT: String = "0.4.0"
+    const val CURRENT: String = "0.4.1"
 }
