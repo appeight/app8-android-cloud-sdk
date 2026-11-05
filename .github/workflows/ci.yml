@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      # Public repo: no token. The composite build picks up ../app8-android-sdk.
+      - name: Check out app8-android-sdk at the pinned version
+        run: scripts/fetch-engine.sh "$GITHUB_WORKSPACE/../app8-android-sdk"
+
+      - name: Version consistency
+        run: scripts/check-version.sh
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      - name: Test, lint, API check, build sample
+        run: >
+          ./gradlew --continue
+          test
+          :cloud:lint
+          apiCheck
+          :sample:assembleDebug
+
+      - name: Upload reports
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: reports
+          path: |
+            **/build/reports/
+            **/build/test-results/
+          retention-days: 7
