@@ -1,0 +1,71 @@
+name: Release
+
+# Pushing a version tag (`0.4.0`; `v0.4.0` is accepted too) publishes `dev.app8:cloud` to GitHub
+# Packages and creates the GitHub release. `/release` pushes the tag; the annotated tag's message
+# becomes the release notes.
+on:
+  push:
+    tags: ["v*", "[0-9]*"]
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write # GitHub release
+  packages: write # GitHub Packages (publish dev.app8:cloud, read dev.app8:engine)
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v7
+
+      # checkout can leave a shallow, dereferenced tag; fetch the annotated tag object for its notes.
+      - name: Fetch the annotated tag
+        run: git fetch --force --no-tags origin "refs/tags/$TAG:refs/tags/$TAG"
+
+      - name: Tag equals SDKVersion.CURRENT; the engine tag exists
+        run: scripts/check-version.sh --release "$TAG"
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: true
+
+      # Against the published engine (no composite build): proves the exact pin resolves.
+      # GITHUB_TOKEN must be allowed to read the app8-android-sdk package (package settings →
+      # "Manage Actions access").
+      - name: Verify against the published engine
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./gradlew -Papp8.engine.local=false test apiCheck
+
+      - name: Publish to GitHub Packages
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./gradlew -Papp8.engine.local=false :cloud:publish
+
+      - name: GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "Release $TAG already exists; leaving it as is"
+            exit 0
+          fi
+          git tag -l --format='%(contents)' "$TAG" > notes.md
+          if [ -s notes.md ]; then
+            gh release create "$TAG" --verify-tag --title "$TAG" --notes-file notes.md --latest
+          else
+            gh release create "$TAG" --verify-tag --title "$TAG" --generate-notes --latest
+          fi
