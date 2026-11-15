@@ -20,10 +20,6 @@ use the engine directly with your own `App8DataSource`.
 > **Status: pre-1.0.** The API may change between `0.x` releases; breaking
 > changes bump the minor version. SemVer guarantees begin at `1.0`.
 
-| Offline launch (sample) | Offline shop (sample) |
-|---|---|
-| <img src="docs/images/sample-offline-launch.png" width="260"> | <img src="docs/images/sample-offline-shop.png" width="260"> |
-
 ## Requirements
 
 - **Android 12 (API 31)+**, the floor shared with the engine; compileSdk 37.

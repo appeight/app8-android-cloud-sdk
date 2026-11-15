@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Builds the sample's offline bundle from a DSL app directory (the engine sample's demostore demo).
+"""Builds the sample's offline bundle from a DSL app directory (the engine sample's commerce demo).
 
     scripts/build-sample-pack.py [<app dir>] [<out .a8pack dir>]
 
-Defaults: ../app8-android-sdk/sample/src/main/assets/demostore →
-sample/src/main/assets/App8OfflinePackages/demostore.a8pack. The result is an
+Defaults: ../app8-android-sdk/sample/src/main/assets/commerce →
+sample/src/main/assets/App8OfflinePackages/commerce.a8pack. The result is an
 `app8.offline.screen` bundle (docs/OFFLINE_BUNDLE_FORMAT.md) carrying the manifest, the
 stylesheet, the component templates, every screen, the datasources and the media. Images over
 300 KB are downscaled with `sips` (macOS) when it is available, to keep the repository small.
@@ -18,9 +18,9 @@ import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-SRC = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT.parent / "app8-android-sdk/sample/src/main/assets/demostore"
-OUT = pathlib.Path(sys.argv[2]) if len(sys.argv) > 2 else ROOT / "sample/src/main/assets/App8OfflinePackages/demostore.a8pack"
-APP_ID = "demostore-demo"
+SRC = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT.parent / "app8-android-sdk/sample/src/main/assets/commerce"
+OUT = pathlib.Path(sys.argv[2]) if len(sys.argv) > 2 else ROOT / "sample/src/main/assets/App8OfflinePackages/commerce.a8pack"
+APP_ID = "commerce-sample"
 VERSION = "v1"
 
 
@@ -38,9 +38,9 @@ def main() -> None:
         "app": load(SRC / "app.json"),
         # Each `styles` entry is one stylesheet (a JSON array of styles), as /sdk/v1 serves them.
         "styles": [load(SRC / "styles.json")],
-        "components": [load(p) for p in sorted((SRC / "components").glob("*.json"))],
+        "components": [load(p) for p in sorted((SRC / "components").glob("*.json"))] if (SRC / "components").exists() else [],
         "screens": screens,
-        "datasources": {f"datasources/{p.stem}": load(p) for p in sorted((SRC / "datasources").glob("*.json"))},
+        "datasources": {f"datasources/{p.stem}": load(p) for p in sorted((SRC / "datasources").glob("*.json"))} if (SRC / "datasources").exists() else {},
         "localizations": {"defaultLocale": "en", "locales": {}},
     }
 
@@ -72,12 +72,12 @@ def main() -> None:
 
     manifest = {
         "type": "app8.offline.screen",
-        "name": "DemoStore",
+        "name": "Commerce sample",
         "version": VERSION,
         "dslVersion": "1.0",
         "bundleFormat": 1,
         "appId": APP_ID,
-        "key": "launch",
+        "key": "tabs",
         "createdAt": "2026-11-05T00:00:00Z",
         "content": base64.b64encode(json.dumps(payload, separators=(",", ":")).encode()).decode(),
         "assets": assets,
