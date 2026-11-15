@@ -78,6 +78,8 @@ internal class RenderingDataSource(
     private var componentsLoaded = false
     private val screensByCacheKey = HashMap<String, ByteArray>()
     private val datasources = HashMap<String, ByteArray>()
+    /** The screen whose render response last carried each datasource path ([reloadDatasource] refetches it). */
+    private val datasourceScreens = HashMap<String, String>()
     private val allScreenIds = ArrayList<String>()
     private var localizations: ByteArray? = null
 
@@ -126,6 +128,7 @@ internal class RenderingDataSource(
                     componentsLoaded = false
                     screensByCacheKey.clear()
                     datasources.clear()
+                    datasourceScreens.clear()
                     allScreenIds.clear()
                     localizations = null
                 }
@@ -218,6 +221,38 @@ internal class RenderingDataSource(
         if (parts.size == 2) cache?.readDatasource(parts[0], parts[1])?.let { return it }
         // The engine's datasource contract; iOS throws decodeFailed here.
         throw DatasourceException.NotFound(screenId, datasourceId)
+    }
+
+    /**
+     * The DSL `reloadDatasource` action: fresh bytes, never the cache. Datasources arrive inline in
+     * a screen's render response, so this refetches that response ([screenId], else the screen
+     * that last carried the datasource, which covers app variables reloaded with an empty
+     * [screenId]) and returns the datasource it carries. Throws when the fetch fails or no screen
+     * is known to carry it, so the action's `onError` runs instead of reporting stale data.
+     */
+    override suspend fun reloadDatasource(screenId: String, datasourceId: String): ByteArray {
+        val owner = synchronized(lock) { datasourceScreens[datasourceId] }
+        val candidates = buildList {
+            if (screenId.isNotEmpty()) add(screenId)
+            if (!owner.isNullOrEmpty() && owner != screenId) add(owner)
+        }
+        var lastError: Exception? = null
+        for (candidate in candidates) {
+            try {
+                val version = readPinnedVersion(candidate)
+                val response = fetchScreenResponse(candidate, version)
+                applyScreenResponse(
+                    response, candidate, version, null, cache?.readScreenMeta(candidate),
+                    ContentHash.sha256Hex(response.data), skipDiskWrite = false,
+                )
+                response.datasources?.get(datasourceId)?.let { return it }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                lastError = e
+            }
+        }
+        throw lastError ?: DatasourceException.NotFound(screenId, datasourceId)
     }
 
     override suspend fun getAsset(assetId: String?, assetName: String?): ByteArray? {
@@ -595,7 +630,10 @@ internal class RenderingDataSource(
             // merged set. Assumes inline styles/components are the complete set.
             if (response.styles != null) stylesLoaded = true
             if (response.components != null) componentsLoaded = true
-            response.datasources?.forEach { (path, blob) -> datasources[path] = blob }
+            response.datasources?.forEach { (path, blob) ->
+                datasources[path] = blob
+                datasourceScreens[path] = screenId
+            }
         }
         if (!skipDiskWrite) cache?.writeScreen(screenId, requestedVersion, body)
         // Served-version alias for later explicit-pin reads; rewritten if pruning removed it.

@@ -69,6 +69,9 @@ internal class FlowScopedDataSource(
     override suspend fun getDatasource(screenId: String, datasourceId: String): ByteArray =
         parent.getDatasource(screenId, datasourceId)
 
+    override suspend fun reloadDatasource(screenId: String, datasourceId: String): ByteArray =
+        parent.reloadDatasource(screenId, datasourceId)
+
     /**
      * Localizations stay app-level for v1: they are app-wide and the localization channel serves
      * latest, so per-flow pinning is deferred.
