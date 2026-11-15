@@ -41,6 +41,9 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v6
         with:
+          # Self-hosted Mac: ~/.gradle persists between runs, and uploading it to the
+          # Actions cache over the slow uplink stalled jobs for half an hour.
+          cache-disabled: true
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
       - name: Test, lint, API check, build sample

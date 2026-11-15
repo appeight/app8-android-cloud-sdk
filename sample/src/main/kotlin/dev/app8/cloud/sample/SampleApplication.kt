@@ -16,7 +16,7 @@ class SampleApplication : Application() {
         App8Cloud.instance(
             context = this,
             token = "app8_test_offline_sample",
-            appId = "demostore-demo",
+            appId = "commerce-sample",
             environment = Environment.Custom("https://api.app8.dev/sdk/v1"),
             telemetry = TelemetryPolicy.DISABLED,
             networkPolicy = NetworkPolicy.OFFLINE_ONLY,

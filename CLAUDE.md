@@ -12,7 +12,7 @@ scripts/fetch-engine.sh              # ../app8-android-sdk at the pinned tag (co
 ./gradlew :cloud:lint apiCheck       # lint, public API dump (cloud/api/cloud.api)
 ./gradlew apiDump                    # after an intended public API change; commit the dump
 ./gradlew :sample:installDebug       # sample: renders its bundled .a8pack offline
-scripts/build-sample-pack.py         # rebuild the sample .a8pack from the engine's demostore demo
+scripts/build-sample-pack.py         # rebuild the sample .a8pack from the engine sample's commerce demo
 ```
 
 The engine comes from `../app8-android-sdk` when present (`includeBuild` in

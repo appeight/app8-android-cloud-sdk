@@ -46,6 +46,9 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v6
         with:
+          # Self-hosted Mac: ~/.gradle persists between runs, and uploading it to the
+          # Actions cache over the slow uplink stalled jobs for half an hour.
+          cache-disabled: true
           cache-read-only: true
 
       # Against the published engine (no composite build): proves the exact pin resolves.
