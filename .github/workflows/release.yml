@@ -17,12 +17,20 @@ permissions:
 
 jobs:
   publish:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 45
     env:
       TAG: ${{ github.ref_name }}
     steps:
       - uses: actions/checkout@v7
+
+      # Self-hosted Mac (moonlander): the Android SDK lives in the runner
+      # user's home, and the work folder persists between runs, so sibling
+      # checkouts from an earlier run are removed before they are fetched.
+      - name: Prepare the Mac runner
+        run: |
+          echo "ANDROID_HOME=$HOME/Library/Android/sdk" >> "$GITHUB_ENV"
+          rm -rf "$GITHUB_WORKSPACE/../app8-android-sdk"
 
       # checkout can leave a shallow, dereferenced tag; fetch the annotated tag object for its notes.
       - name: Fetch the annotated tag
