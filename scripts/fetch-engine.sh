@@ -4,8 +4,11 @@
 #
 #   scripts/fetch-engine.sh [--strict] [<dir>]   # default dir: ../app8-android-sdk
 #
-# Checks out the tag equal to SDKVersion.CURRENT; without --strict, falls back to main while the
-# engine release is not tagged yet (the version check then still compares EngineVersion.CURRENT).
+# Checks out the tag equal to SDKVersion.CURRENT. Without --strict, while the engine release is
+# not tagged yet, it falls back to the engine's own version branch (version-<version>, the
+# engine's "Version <version>" pull request) and then to main. So this repo's version pull
+# request is tested against the engine it will ship with, also before that engine pull request
+# is merged. The version check still compares EngineVersion.CURRENT in every case.
 # An existing checkout is left untouched.
 set -euo pipefail
 
@@ -25,6 +28,9 @@ if git ls-remote --exit-code --tags "$repo" "refs/tags/$version" > /dev/null; th
 elif [[ "$strict" == true ]]; then
     echo "::error::app8-android-sdk has no tag '$version'" >&2
     exit 1
+elif git ls-remote --exit-code --heads "$repo" "refs/heads/version-$version" > /dev/null; then
+    echo "app8-android-sdk tag '$version' not found; using branch version-$version"
+    git clone --depth 1 --branch "version-$version" "$repo" "$dir"
 else
     echo "app8-android-sdk tag '$version' not found; using main"
     git clone --depth 1 "$repo" "$dir"
