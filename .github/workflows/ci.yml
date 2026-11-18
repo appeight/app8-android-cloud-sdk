@@ -25,6 +25,19 @@ jobs:
       - name: Prepare the Mac runner
         run: |
           echo "ANDROID_HOME=$HOME/Library/Android/sdk" >> "$GITHUB_ENV"
+          # Three runners share this Mac's home. With one ~/.gradle, the daemon
+          # clean-up at the end of one job stopped the daemons of the jobs still
+          # running ("Gradle build daemon has been stopped: stop command
+          # received"). Each runner has its own Gradle home, seeded once from
+          # ~/.gradle so the first build does not download every dependency.
+          gradle_home="$HOME/.gradle-runners/$RUNNER_NAME"
+          if [ ! -d "$gradle_home" ]; then
+            mkdir -p "$gradle_home/caches"
+            for item in wrapper caches/modules-2 gradle.properties init.d; do
+              if [ -e "$HOME/.gradle/$item" ]; then cp -cR "$HOME/.gradle/$item" "$gradle_home/$item"; fi
+            done
+          fi
+          echo "GRADLE_USER_HOME=$gradle_home" >> "$GITHUB_ENV"
           rm -rf "$GITHUB_WORKSPACE/../app8-android-sdk"
 
       # Public repo: no token. The composite build picks up ../app8-android-sdk.
@@ -41,10 +54,9 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v6
         with:
-          # Self-hosted Mac: ~/.gradle persists between runs, and uploading it to the
+          # Self-hosted Mac: the Gradle home persists between runs, and uploading it to the
           # Actions cache over the slow uplink stalled jobs for half an hour.
           cache-disabled: true
-          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
       - name: Test, lint, API check, build sample
         run: >
