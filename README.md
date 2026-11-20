@@ -42,7 +42,7 @@ dependencyResolutionManagement {
 
 // build.gradle.kts
 dependencies {
-    implementation("dev.app8:cloud:0.7.9")
+    implementation("dev.app8:cloud:0.7.10")
 }
 ```
 
